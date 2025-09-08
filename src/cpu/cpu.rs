@@ -40,3 +40,25 @@ impl CPU {
         };
     }
 
+    pub fn step(&mut self) {
+        let opcode: Opcode = 0; // TODO: Fetch from memory
+        let instruction: Instructions = Instructions::get_instruction(opcode);
+        self.registers.increase_program_counter(1);
+        self.execute(instruction);
+    }
+
+    pub fn execute(&mut self, instruction: Instructions) {
+        match instruction {
+            Instructions::NONE => {}
+            Instructions::PREFIX => self.PREFIX(),
+            _ => {} // TODO: To remove
+        }
+    }
+
+    fn PREFIX(&mut self) {
+        let opcode: Opcode = 0; // TODO: Fetch from memory
+        let instructions: Instructions = Instructions::get_instruction_prefixed(opcode);
+        self.registers.increase_program_counter(1);
+        self.execute(instructions);
+    }
+
