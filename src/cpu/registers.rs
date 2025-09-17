@@ -1,3 +1,5 @@
+use crate::mmu::mmu::{Address, Byte};
+
 pub type Register8 = u8;
 pub type Register16 = u16;
 
@@ -14,7 +16,7 @@ pub struct Registers {
     pc: Register16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Registers8 {
     A,
     B,
@@ -26,6 +28,7 @@ pub enum Registers8 {
     L,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Registers16 {
     AF,
     BC,
@@ -35,11 +38,23 @@ pub enum Registers16 {
     PC,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Flags {
     Zero,
     Subtraction,
     HalfCarry,
     Carry,
+}
+
+impl Flags {
+    pub fn is_set(&self) -> bool {
+        match self {
+            Flags::Zero => true,
+            Flags::Subtraction => true,
+            Flags::HalfCarry => true,
+            Flags::Carry => true,
+        }
+    }
 }
 
 impl Registers {
@@ -134,7 +149,15 @@ impl Registers {
         self.pc
     }
 
-    pub fn set_flag(&mut self, flag: Flags) {
+    pub fn set_flag(&mut self, flag: Flags, condition: bool) {
+        if condition {
+            self.flag_up(flag);
+        } else {
+            self.flag_down(flag);
+        }
+    }
+
+    pub fn flag_up(&mut self, flag: Flags) {
         match flag {
             Flags::Zero => self.set_register_8(Registers8::F, self.f | (1 << 7)),
             Flags::Subtraction => self.set_register_8(Registers8::F, self.f | (1 << 6)),
@@ -143,7 +166,7 @@ impl Registers {
         }
     }
 
-    pub fn unset_flag(&mut self, flag: Flags) {
+    pub fn flag_down(&mut self, flag: Flags) {
         match flag {
             Flags::Zero => self.set_register_8(Registers8::F, self.f & (1 << 7)),
             Flags::Subtraction => self.set_register_8(Registers8::F, self.f & (1 << 6)),
@@ -159,6 +182,14 @@ impl Registers {
             Flags::HalfCarry => (self.get_register_8(Registers8::F) & (1 << 5)) != 0,
             Flags::Carry => (self.get_register_8(Registers8::F) & (1 << 4)) != 0,
         }
+    }
+
+    pub fn is_flag_up(&self, flag: Flags) -> bool {
+        self.get_flag(flag)
+    }
+
+    pub fn is_flag_down(&self, flag: Flags) -> bool {
+        !self.get_flag(flag)
     }
 
     pub fn increase_program_counter(&mut self, value: Register16) {
