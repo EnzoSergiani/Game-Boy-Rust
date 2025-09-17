@@ -1,4 +1,4 @@
 pub mod cpu;
-pub mod instructions;
-pub mod log;
+mod instructions;
+mod log;
 pub mod registers;

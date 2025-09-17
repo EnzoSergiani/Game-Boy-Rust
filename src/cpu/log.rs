@@ -1,13 +1,16 @@
-use crate::cpu::{
-    cpu::{CPU, Opcode, Status},
-    registers::{Flags, Registers8, Registers16},
+use crate::{
+    cpu::{
+        cpu::CPU,
+        registers::{Flags, Registers8, Registers16},
+    },
+    mmu::mmu::Byte,
 };
 
 use chrono::{Local, Timelike};
 use std::{fs::OpenOptions, io::Write};
 
 impl CPU {
-    pub fn write_log(&mut self, opcode: Opcode) {
+    pub fn write_log(&mut self, opcode: Byte) {
         let now: chrono::DateTime<Local> = Local::now();
         let log_time: String = format!(
             "Time: {:02}:{:02}:{:02}:{:03}\n",
@@ -15,14 +18,6 @@ impl CPU {
             now.minute(),
             now.second(),
             now.timestamp_subsec_millis()
-        );
-        let log_status: String = format!(
-            "Status: [{}]",
-            match self.get_status() {
-                Status::Halted => "HALTED",
-                Status::Running => "RUNNING",
-                Status::Stopped => "STOPPED",
-            }
         );
         let log_opcode: String = format!("Next opcode: 0x{:02X}", opcode);
         let log_message_registers_8: String = format!(
@@ -60,7 +55,6 @@ impl CPU {
         {
             let _ = file.write_all(b"*--------------------------------------------------------*\n");
             let _ = file.write_all(log_time.as_bytes());
-            let _ = file.write_all(log_status.as_bytes());
             let _ = file.write_all(b"\n");
             let _ = file.write_all(log_opcode.as_bytes());
             let _ = file.write_all(b"\n");
