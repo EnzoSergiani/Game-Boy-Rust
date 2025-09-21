@@ -1,11 +1,14 @@
 use std::fs;
 
-use crate::mmu::mmu::{Address, Byte};
+use crate::mmu::mmu::{ADDRESS_RAM, ADDRESS_ROM, Address, Byte, DEFAULT_BYTE, Size};
+
+const SIZE_RAM: Size = ADDRESS_RAM.end - ADDRESS_RAM.start + 1;
+const SIZE_ROM: Size = ADDRESS_ROM.end - ADDRESS_ROM.start + 1;
 
 pub struct Cartridge {
-    rom: Vec<Byte>,
-    ram: Vec<Byte>,
-    entry_point: Byte,
+    rom: [Byte; SIZE_ROM],
+    ram: [Byte; SIZE_RAM],
+    entry_point: Address,
     title: String,
     manufacturer_code: Byte,
     licence_code: LicenceCode,
@@ -16,7 +19,8 @@ pub struct Cartridge {
     destination_code: DestinationCode,
     old_licence_code: OldLicenceCode,
     mask_rom_version_number: Byte,
-    header_checksum_valid: bool,
+    is_nintendo_logo: bool,
+    is_header_checksum_valid: bool,
 }
 
 #[derive(Debug)]
@@ -269,43 +273,38 @@ enum OldLicenceCode {
 impl Cartridge {
     pub fn insert(path: &str) -> Self {
         let bytes_result: Result<Vec<Byte>, &'static str> = Cartridge::read(path);
-
         match bytes_result {
             Ok(bytes) => {
-                if let Err(_e) = Cartridge::is_valid(&bytes) {
-                    Cartridge::eject()
-                } else {
-                    let entry_point: Byte = Cartridge::extract_entry_point(&bytes);
-                    let title: String = Cartridge::extract_title(&bytes);
-                    let manufacturer_code: Byte = Cartridge::extract_manufacturer_code(&bytes);
-                    let licence_code: LicenceCode = Cartridge::extract_licence_code(&bytes);
-                    let supports_sgb: bool = Cartridge::extract_sgb_flag(&bytes);
-                    let cartridge_type: CartridgeType = Cartridge::extract_cartridge_type(&bytes);
-                    let rom_size: usize = Cartridge::extract_rom_size(&bytes);
-                    let ram_size: usize = Cartridge::extract_ram_size(&bytes);
-                    let destination_code: DestinationCode =
-                        Cartridge::extract_destination_code(&bytes);
-                    let old_licence_code: OldLicenceCode =
-                        Cartridge::extract_old_licence_code(&bytes);
-                    let mask_rom_version_number: u8 =
-                        Cartridge::extract_mask_rom_version_number(&bytes);
-                    let header_checksum_valid: bool = Cartridge::is_header_checksum_valid(&bytes);
-                    Cartridge {
-                        rom: bytes,
-                        ram: vec![0; ram_size],
-                        entry_point,
-                        title,
-                        manufacturer_code,
-                        licence_code,
-                        supports_sgb,
-                        cartridge_type,
-                        rom_size,
-                        ram_size,
-                        destination_code,
-                        old_licence_code,
-                        mask_rom_version_number,
-                        header_checksum_valid,
-                    }
+                let entry_point: Address = Cartridge::extract_entry_point();
+                let title: String = Cartridge::extract_title(&bytes);
+                let manufacturer_code: Byte = Cartridge::extract_manufacturer_code(&bytes);
+                let licence_code: LicenceCode = Cartridge::extract_licence_code(&bytes);
+                let supports_sgb: bool = Cartridge::extract_sgb_flag(&bytes);
+                let cartridge_type: CartridgeType = Cartridge::extract_cartridge_type(&bytes);
+                let rom_size: Size = Cartridge::extract_rom_size(&bytes);
+                let ram_size: Size = Cartridge::extract_ram_size(&bytes);
+                let destination_code: DestinationCode = Cartridge::extract_destination_code(&bytes);
+                let old_licence_code: OldLicenceCode = Cartridge::extract_old_licence_code(&bytes);
+                let mask_rom_version_number: Byte =
+                    Cartridge::extract_mask_rom_version_number(&bytes);
+                let is_nintendo_logo = Cartridge::is_nintendo_logo(&bytes);
+                let is_header_checksum_valid: bool = Cartridge::is_header_checksum_valid(&bytes);
+                Cartridge {
+                    rom: [DEFAULT_BYTE; SIZE_ROM],
+                    ram: [DEFAULT_BYTE; SIZE_RAM],
+                    entry_point,
+                    title,
+                    manufacturer_code,
+                    licence_code,
+                    supports_sgb,
+                    cartridge_type,
+                    rom_size,
+                    ram_size,
+                    destination_code,
+                    old_licence_code,
+                    mask_rom_version_number,
+                    is_nintendo_logo,
+                    is_header_checksum_valid,
                 }
             }
             Err(_e) => Cartridge::eject(),
@@ -319,7 +318,7 @@ impl Cartridge {
         }
     }
 
-    fn is_valid(bytes: &[Byte]) -> Result<(), &'static str> {
+    fn is_nintendo_logo(bytes: &[Byte]) -> bool {
         const NINTENDO_LOGO_START: Address = 0x0104;
         const NINTENDO_LOGO_END: Address = 0x133;
 
@@ -332,16 +331,13 @@ impl Cartridge {
             0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
         ];
 
-        if nintendo_logo_dump != valid_logo {
-            Err("Nintendo logo does not match")
-        } else {
-            Ok(())
-        }
+        nintendo_logo_dump == valid_logo
     }
 
-    fn extract_entry_point(bytes: &[Byte]) -> Byte {
-        const ENTRY_POINT: Address = 0x100;
-        bytes[ENTRY_POINT]
+    fn extract_entry_point() -> Address {
+        // const ENTRY_POINT: Address = 0x100;
+        // bytes[ENTRY_POINT]
+        0x100
     }
 
     fn extract_title(bytes: &[Byte]) -> String {
@@ -692,8 +688,8 @@ impl Cartridge {
 
     pub fn eject() -> Self {
         Cartridge {
-            rom: Vec::new(),
-            ram: Vec::new(),
+            rom: [DEFAULT_BYTE; SIZE_ROM],
+            ram: [DEFAULT_BYTE; SIZE_RAM],
             entry_point: 0,
             title: "none".to_string(),
             manufacturer_code: 0,
@@ -705,32 +701,40 @@ impl Cartridge {
             destination_code: DestinationCode::Japan,
             old_licence_code: OldLicenceCode::None,
             mask_rom_version_number: 0,
-            header_checksum_valid: false,
+            is_nintendo_logo: false,
+            is_header_checksum_valid: false,
         }
     }
 
-    pub fn get_entry_point(&self) -> Byte {
+    pub fn get_entry_point(&self) -> Address {
         self.entry_point
     }
 
-    pub fn get_rom(&self) -> &Vec<Byte> {
-        &self.rom
+    pub fn get_rom(&self) -> [Byte; SIZE_ROM] {
+        self.rom
     }
 
     pub fn read_rom(&self, address: Address) -> Byte {
-        self.rom[address]
+        let shift: Address = address - ADDRESS_ROM.start;
+        self.rom[shift]
     }
 
-    pub fn get_ram(&self) -> &Vec<Byte> {
-        &self.ram
+    pub fn get_ram(&self) -> [Byte; SIZE_RAM] {
+        self.ram
     }
 
     pub fn read_ram(&self, address: Address) -> Byte {
-        self.ram[address]
+        let shift: Address = address - ADDRESS_RAM.start;
+        self.ram[shift]
     }
 
     pub fn write_ram(&mut self, address: Address, value: Byte) {
-        self.ram[address] = value;
+        let shift: Address = address - ADDRESS_RAM.start;
+        self.ram[shift] = value;
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.is_nintendo_logo && self.is_header_checksum_valid
     }
 
     pub fn print_data(&self) {
@@ -748,6 +752,7 @@ impl Cartridge {
             "Mask ROM Version Number: 0x{:04X}",
             self.mask_rom_version_number
         );
-        println!("Header Checksum Valid: {}", self.header_checksum_valid);
+        println!("Is Nintendo logo: {}", self.is_nintendo_logo);
+        println!("Header Checksum Valid: {}", self.is_header_checksum_valid);
     }
 }
