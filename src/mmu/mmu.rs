@@ -7,6 +7,8 @@ use core::panic;
 
 pub type Byte = u8;
 pub type Address = usize;
+pub type Size = usize;
+pub const DEFAULT_BYTE: Byte = 0x0000;
 
 pub struct AddressRange {
     pub start: Address,
@@ -64,12 +66,15 @@ pub const ADDRESS_IE_REGISTER: AddressRange = AddressRange {
     end: 0xFFFF,
 };
 
+const SIZE_WRAM: Size = ADDRESS_WRAM.end - ADDRESS_WRAM.start + 1;
+const SIZE_HRAM: Size = ADDRESS_HRAM.end - ADDRESS_HRAM.start + 1;
+
 pub struct MMU {
     cpu: CPU,
     ppu: PPU,
     cartridge: Cartridge,
-    wram: Vec<Byte>,
-    hram: Vec<Byte>,
+    wram: [Byte; SIZE_WRAM],
+    hram: [Byte; SIZE_HRAM],
 }
 
 impl MMU {
@@ -78,28 +83,32 @@ impl MMU {
             cpu: CPU::new(),
             ppu: PPU::new(),
             cartridge: Cartridge::eject(),
-            wram: vec![0x0000; ADDRESS_WRAM.end - ADDRESS_WRAM.start + 1],
-            hram: vec![0x0000; ADDRESS_HRAM.end - ADDRESS_HRAM.start + 1],
+            wram: [DEFAULT_BYTE; SIZE_WRAM],
+            hram: [DEFAULT_BYTE; SIZE_HRAM],
         }
     }
 
     pub fn set_cartridge(&mut self, cartridge: Cartridge) {
+        cartridge.print_data();
+        if !cartridge.is_valid() {
+            panic!("Invalid cartridge inserted!");
+        }
         self.cartridge = cartridge;
     }
 
-    pub fn read_wram(&self, address: Address) -> Byte {
+    fn read_wram(&self, address: Address) -> Byte {
         self.wram[address - ADDRESS_WRAM.start]
     }
 
-    pub fn write_wram(&mut self, address: Address, value: Byte) {
+    fn write_wram(&mut self, address: Address, value: Byte) {
         self.wram[address - ADDRESS_WRAM.start] = value;
     }
 
-    pub fn read_hram(&self, address: Address) -> Byte {
+    fn read_hram(&self, address: Address) -> Byte {
         self.hram[address - ADDRESS_HRAM.start]
     }
 
-    pub fn write_hram(&mut self, address: Address, value: Byte) {
+    fn write_hram(&mut self, address: Address, value: Byte) {
         self.hram[address - ADDRESS_HRAM.start] = value;
     }
 
@@ -131,7 +140,11 @@ impl MMU {
 
     pub fn write_memory(&mut self, address: Address, value: Byte) {
         if address >= ADDRESS_ROM.start && address <= ADDRESS_ROM.end {
-            panic!("Cannot write to ROM address: 0x{:04X}", address);
+            println!(
+                "Tentative d'écriture en ROM à 0x{:04X} avec valeur 0x{:02X}",
+                address, value
+            );
+            // panic!("Cannot write to ROM address: 0x{:04X}", address);
         } else if address >= ADDRESS_VRAM.start && address <= ADDRESS_VRAM.end {
             self.ppu.write_vram(address, value);
         } else if address >= ADDRESS_RAM.start && address <= ADDRESS_RAM.end {
@@ -155,11 +168,19 @@ impl MMU {
         }
     }
 
-    pub fn start_cpu(&mut self) {
-        self.cpu.start(&self.cartridge);
+    pub fn print_vram(&mut self) {
+        self.ppu.debug();
     }
 
-    pub fn start_mmu(&mut self) {
-        self.start_cpu();
+    pub fn start_cpu(&mut self, entry_point: Address) {
+        self.cpu.start(entry_point);
+    }
+
+    pub fn run(&mut self) {
+        loop {
+            let mut cpu: CPU = std::mem::replace(&mut self.cpu, CPU::new());
+            cpu.step(self);
+            self.cpu = cpu;
+        }
     }
 }
