@@ -5,3 +5,9 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A Gameboy emulator written in Rust. Currently a work in progress.
+
+## Usage
+
+```bash
+cargo run --release -- <path_to_your_rom.gb>
+```
