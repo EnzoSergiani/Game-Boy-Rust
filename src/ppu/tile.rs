@@ -20,7 +20,7 @@ impl Tile {
                 let bit: usize = 7 - col;
                 let l: Byte = (low >> bit) & 1;
                 let h: Byte = (high >> bit) & 1;
-                pixels[row][col] = (l << 1) | h;
+                pixels[row][col] = (h << 1) | l;
             }
         }
         Tile { pixels }
