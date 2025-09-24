@@ -14,6 +14,17 @@ pub struct Palette {
     pub colors: [Colors; 4],
 }
 
+impl Colors {
+    pub fn to_rgb(&self) -> u32 {
+        match self {
+            Colors::White => 0xFFFFFF,
+            Colors::LightGray => 0xAAAAAA,
+            Colors::DarkGray => 0x555555,
+            Colors::Black => 0x000000,
+        }
+    }
+}
+
 impl Palette {
     pub fn new() -> Self {
         Palette {

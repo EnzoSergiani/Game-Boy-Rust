@@ -1,8 +1,3 @@
-use crate::{
-    cartridge::cartridge::Cartridge,
-    mmu::mmu::{Address, Byte, MMU},
-    mmu::mmu::{Address, MMU},
-};
 use crate::{cartridge::cartridge::Cartridge, lcd::lcd::LCD, mmu::mmu::MMU};
 
 pub struct Emulator {
@@ -20,7 +15,7 @@ impl Emulator {
 
     pub fn start_cartridge(&mut self, path: &str) {
         let cartridge: Cartridge = Cartridge::insert(path);
-        let entry_point: Address = cartridge.get_entry_point();
         self.mmu.set_cartridge(cartridge);
+        self.lcd.start(&self.mmu);
     }
 }

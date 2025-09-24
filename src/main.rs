@@ -15,4 +15,5 @@ fn main() {
     }
     let gb_path: &String = &args[1];
     let mut emulator: Emulator = Emulator::new();
+    emulator.start_cartridge(gb_path);
 }

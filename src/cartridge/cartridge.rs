@@ -1,6 +1,9 @@
 use std::fs;
 
-use crate::mmu::mmu::{ADDRESS_RAM, ADDRESS_ROM, Address, Byte, DEFAULT_BYTE, Size};
+use crate::mmu::mmu::{
+    ADDRESS_NINTENDO_LOGO, ADDRESS_RAM, ADDRESS_ROM, Address, AddressRange, Byte, DEFAULT_BYTE,
+    SIZE_NINTENDO_LOGO, Size,
+};
 
 const SIZE_RAM: Size = ADDRESS_RAM.end - ADDRESS_RAM.start + 1;
 const SIZE_ROM: Size = ADDRESS_ROM.end - ADDRESS_ROM.start + 1;
@@ -275,6 +278,8 @@ impl Cartridge {
         let bytes_result: Result<Vec<Byte>, &'static str> = Cartridge::read(path);
         match bytes_result {
             Ok(bytes) => {
+                let rom: [Byte; SIZE_ROM] = Cartridge::extract_rom(&bytes);
+                let ram: [Byte; SIZE_RAM] = Cartridge::extract_ram(&bytes);
                 let entry_point: Address = Cartridge::extract_entry_point();
                 let title: String = Cartridge::extract_title(&bytes);
                 let manufacturer_code: Byte = Cartridge::extract_manufacturer_code(&bytes);
@@ -290,8 +295,8 @@ impl Cartridge {
                 let is_nintendo_logo = Cartridge::is_nintendo_logo(&bytes);
                 let is_header_checksum_valid: bool = Cartridge::is_header_checksum_valid(&bytes);
                 Cartridge {
-                    rom: [DEFAULT_BYTE; SIZE_ROM],
-                    ram: [DEFAULT_BYTE; SIZE_RAM],
+                    rom,
+                    ram,
                     entry_point,
                     title,
                     manufacturer_code,
@@ -319,12 +324,19 @@ impl Cartridge {
     }
 
     fn is_nintendo_logo(bytes: &[Byte]) -> bool {
-        const NINTENDO_LOGO_START: Address = 0x0104;
-        const NINTENDO_LOGO_END: Address = 0x133;
+        const ADDRESS_NINTENDO_LOGO_DUMP: AddressRange = AddressRange {
+            start: 0x104,
+            end: 0x133,
+        };
+        const SIZE_NINTENDO_LOGO_DUMP: Size =
+            ADDRESS_NINTENDO_LOGO_DUMP.end - ADDRESS_NINTENDO_LOGO_DUMP.start + 1;
+        let mut nintendo_logo_dump: [Byte; SIZE_NINTENDO_LOGO_DUMP] =
+            [DEFAULT_BYTE; SIZE_NINTENDO_LOGO_DUMP];
+        for address in ADDRESS_NINTENDO_LOGO_DUMP.start..=ADDRESS_NINTENDO_LOGO_DUMP.end {
+            nintendo_logo_dump[address - ADDRESS_NINTENDO_LOGO_DUMP.start] = bytes[address];
+        }
 
-        let nintendo_logo_dump: &[Byte] = &bytes[NINTENDO_LOGO_START..NINTENDO_LOGO_END + 1];
-
-        let valid_logo: [Byte; 48] = [
+        let valid_logo: [Byte; SIZE_NINTENDO_LOGO_DUMP] = [
             0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C,
             0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6,
             0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC,
@@ -332,6 +344,22 @@ impl Cartridge {
         ];
 
         nintendo_logo_dump == valid_logo
+    }
+
+    fn extract_rom(bytes: &[Byte]) -> [Byte; SIZE_ROM] {
+        let mut rom: [Byte; SIZE_ROM] = [DEFAULT_BYTE; SIZE_ROM];
+        for address in ADDRESS_ROM.start..=ADDRESS_ROM.end {
+            rom[address - ADDRESS_ROM.start] = bytes[address];
+        }
+        rom
+    }
+
+    fn extract_ram(bytes: &[Byte]) -> [Byte; SIZE_RAM] {
+        let mut ram: [Byte; SIZE_RAM] = [DEFAULT_BYTE; SIZE_RAM];
+        for address in ADDRESS_RAM.start..=ADDRESS_RAM.end {
+            ram[address - ADDRESS_RAM.start] = bytes[address];
+        }
+        ram
     }
 
     fn extract_entry_point() -> Address {
@@ -715,8 +743,7 @@ impl Cartridge {
     }
 
     pub fn read_rom(&self, address: Address) -> Byte {
-        let shift: Address = address - ADDRESS_ROM.start;
-        self.rom[shift]
+        self.rom[address - ADDRESS_ROM.start]
     }
 
     pub fn get_ram(&self) -> [Byte; SIZE_RAM] {
@@ -737,6 +764,15 @@ impl Cartridge {
         self.is_nintendo_logo && self.is_header_checksum_valid
     }
 
+    pub fn get_nintendo_logo(&self) -> [Byte; SIZE_NINTENDO_LOGO] {
+        let mut nintendo_logo_dump: [Byte; SIZE_NINTENDO_LOGO] = [DEFAULT_BYTE; SIZE_NINTENDO_LOGO];
+        for address in ADDRESS_NINTENDO_LOGO.start..=ADDRESS_NINTENDO_LOGO.end {
+            nintendo_logo_dump[address - ADDRESS_NINTENDO_LOGO.start] = self.read_rom(address);
+        }
+
+        nintendo_logo_dump
+    }
+
     pub fn print_data(&self) {
         println!("Entry Point: 0x{:04X}", self.entry_point);
         println!("Title: {}", self.title);
@@ -754,5 +790,6 @@ impl Cartridge {
         );
         println!("Is Nintendo logo: {}", self.is_nintendo_logo);
         println!("Header Checksum Valid: {}", self.is_header_checksum_valid);
+        println!();
     }
 }
