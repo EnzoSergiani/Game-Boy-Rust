@@ -1,5 +1,5 @@
 use crate::{
-    mmu::mmu::{ADDRESS_OAM, ADDRESS_VRAM, Address, AddressRange, Byte, DEFAULT_BYTE},
+    mmu::mmu::{ADDRESS_OAM, ADDRESS_VRAM, Address, AddressRange, Byte, DEFAULT_BYTE, MMU},
     ppu::tile::Tile,
 };
 
@@ -35,23 +35,19 @@ impl PPU {
     }
 
     pub fn read_vram(&self, address: Address) -> Byte {
-        let shift: Address = address - ADDRESS_VRAM.start;
-        self.vram[shift]
+        self.vram[address - ADDRESS_VRAM.start]
     }
 
     pub fn write_vram(&mut self, address: Address, value: Byte) {
-        let shift: Address = address - ADDRESS_VRAM.start;
-        self.vram[shift] = value;
+        self.vram[address - ADDRESS_VRAM.start] = value;
     }
 
     pub fn read_oam(&self, address: Address) -> Byte {
-        let shift: Address = address - ADDRESS_VRAM.start;
-        self.oam[shift]
+        self.oam[address - ADDRESS_VRAM.start]
     }
 
     pub fn write_oam(&mut self, address: Address, value: Byte) {
-        let shift: Address = address - ADDRESS_VRAM.start;
-        self.oam[shift] = value;
+        self.oam[address - ADDRESS_VRAM.start] = value;
     }
 
     pub fn reset_vram(&mut self) {
@@ -80,30 +76,7 @@ impl PPU {
         Tile::from_bytes(bytes)
     }
 
-    pub fn set_test_tile(&mut self) {
-        let test_bytes: [Byte; 16] = [
-            0x33, 0x55, 0x99, 0xAA, 0x99, 0xAA, 0x33, 0x55, 0x33, 0x55, 0x99, 0xAA, 0x99, 0xAA,
-            0x33, 0x55,
-        ];
-
-        for i in 0..test_bytes.len() {
-            self.write_vram(ADDRESS_VRAM.start + i, test_bytes[i]);
-        }
-    }
-
-    pub fn debug(&mut self) {
-        self.set_test_tile();
-
-        println!("VRAM Dump:");
-        for (i, byte) in self.vram.iter().enumerate() {
-            if i % 16 == 0 {
-                print!("\n{:04X}: ", ADDRESS_VRAM.start + i as Address);
-            }
-            print!("{:02X} ", byte);
-        }
-        println!();
-        println!();
-
+    pub fn print_tile_set(&self) {
         println!("Tile set:");
         let vram_tile_count = (SIZE_VRAM / 16) as usize;
         let tile_count = usize::min(
@@ -138,8 +111,10 @@ impl PPU {
             println!();
         }
         println!();
+    }
 
-        println!("Tile Map:");
+    pub fn print_tile_map(&self) {
+        println!("TILE MAP:");
         for address in ADDRESS_TILE_MAP.start..=ADDRESS_TILE_MAP.end {
             let byte = self.read_vram(address);
             print!("{:03X} ", byte);
@@ -148,5 +123,10 @@ impl PPU {
             }
         }
         println!();
+    }
+
+    pub fn debug(&mut self) {
+        self.print_tile_set();
+        self.print_tile_map();
     }
 }

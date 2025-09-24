@@ -176,11 +176,14 @@ impl MMU {
         self.cpu.start(entry_point);
     }
 
-    pub fn run(&mut self) {
-        loop {
-            let mut cpu: CPU = std::mem::replace(&mut self.cpu, CPU::new());
-            cpu.step(self);
-            self.cpu = cpu;
+    pub fn print_hex(dump: &[Byte], start_addr: Address, title: &str) {
+        print!("{}:", title);
+        for (i, byte) in dump.iter().enumerate() {
+            if i % 16 == 0 {
+                print!("\n{:04X}: ", start_addr + i);
+            }
+            print!("{:02X} ", byte);
         }
+        println!("\n");
     }
 }
