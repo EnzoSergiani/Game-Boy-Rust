@@ -69,6 +69,7 @@ pub const ADDRESS_NINTENDO_LOGO: AddressRange = AddressRange {
 
 const SIZE_WRAM: Size = ADDRESS_WRAM.end - ADDRESS_WRAM.start + 1;
 const SIZE_HRAM: Size = ADDRESS_HRAM.end - ADDRESS_HRAM.start + 1;
+const SIZE_IO: Size = ADDRESS_IO.end - ADDRESS_IO.start + 1;
 pub const SIZE_NINTENDO_LOGO: Size = ADDRESS_NINTENDO_LOGO.end - ADDRESS_NINTENDO_LOGO.start + 1;
 
 pub struct MMU {
@@ -77,6 +78,7 @@ pub struct MMU {
     cartridge: Cartridge,
     wram: [Byte; SIZE_WRAM],
     hram: [Byte; SIZE_HRAM],
+    io: [Byte; SIZE_IO],
 }
 
 impl MMU {
@@ -87,6 +89,7 @@ impl MMU {
             cartridge: Cartridge::eject(),
             wram: [DEFAULT_BYTE; SIZE_WRAM],
             hram: [DEFAULT_BYTE; SIZE_HRAM],
+            io: [DEFAULT_BYTE; SIZE_IO],
         }
     }
 
@@ -106,6 +109,14 @@ impl MMU {
         self.hram[address - ADDRESS_HRAM.start] = value;
     }
 
+    fn read_io(&self, address: Address) -> Byte {
+        self.io[address - ADDRESS_IO.start]
+    }
+
+    fn write_io(&mut self, address: Address, value: Byte) {
+        self.io[address - ADDRESS_IO.start] = value;
+    }
+
     pub fn read_memory(&self, address: Address) -> Byte {
         if address >= ADDRESS_ROM.start && address <= ADDRESS_ROM.end {
             self.cartridge.read_rom(address)
@@ -122,7 +133,7 @@ impl MMU {
         } else if address >= ADDRESS_INVALID_OAM.start && address <= ADDRESS_INVALID_OAM.end {
             0xFF
         } else if address >= ADDRESS_IO.start && address <= ADDRESS_IO.end {
-            0xFF
+            self.read_io(address)
         } else if address >= ADDRESS_HRAM.start && address <= ADDRESS_HRAM.end {
             self.read_hram(address)
         } else if address >= ADDRESS_IE_REGISTER.start && address <= ADDRESS_IE_REGISTER.end {
@@ -152,7 +163,7 @@ impl MMU {
         } else if address >= ADDRESS_INVALID_OAM.start && address <= ADDRESS_INVALID_OAM.end {
             // Do nothing
         } else if address >= ADDRESS_IO.start && address <= ADDRESS_IO.end {
-            // Do nothing
+            self.write_io(address, value);
         } else if address >= ADDRESS_HRAM.start && address <= ADDRESS_HRAM.end {
             self.write_hram(address, value);
         } else if address >= ADDRESS_IE_REGISTER.start && address <= ADDRESS_IE_REGISTER.end {
@@ -249,8 +260,8 @@ impl MMU {
             }
         }
 
-        let pox_x: Address = 10;
-        let pox_y: Address = 13;
+        let pox_x: Address = 4;
+        let pox_y: Address = 8;
 
         for tile_id in 0..13 {
             let tile_map_addr_row1: Address =
@@ -271,7 +282,7 @@ impl MMU {
     }
 
     pub fn boot_ROM(&mut self) {
-        self.cartridge.print_data();
+        // self.cartridge.print_data();
         self.ppu.reset_vram();
 
         const SIZE_BOOT_ROM: Size = ADDRESS_BOOT_ROM.end - ADDRESS_BOOT_ROM.start + 1;
@@ -288,7 +299,21 @@ impl MMU {
         let logo_nintendo: [[Byte; 12]; 32] = self.get_nintendo_logo();
         self.print_logo(logo_nintendo);
 
-        self.ppu.debug();
+        self.set_wx(0);
+        self.set_wy(160);
+
+        // self.ppu.debug();
+    }
+
+    pub fn on_frame(&mut self) {
+        let new_wx: Byte = self.get_wx() as Byte;
+        let mut new_wy: Byte = self.get_wy() as Byte;
+        if new_wy > 0 {
+            new_wy -= 1;
+        }
+
+        self.set_wx(new_wx);
+        self.set_wy(new_wy);
     }
 
     pub fn get_tile(&self, id: Address) -> Tile {
@@ -304,5 +329,21 @@ impl MMU {
             print!("{:02X} ", byte);
         }
         println!("\n");
+    }
+
+    pub fn get_wy(&self) -> Address {
+        self.read_io(0xFF4A) as Address
+    }
+
+    pub fn get_wx(&self) -> Address {
+        self.read_io(0xFF4B) as Address
+    }
+
+    pub fn set_wx(&mut self, value: Byte) {
+        self.write_io(0xFF4B, value);
+    }
+
+    pub fn set_wy(&mut self, value: Byte) {
+        self.write_io(0xFF4A, value);
     }
 }

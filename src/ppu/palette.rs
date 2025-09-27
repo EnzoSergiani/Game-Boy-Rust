@@ -6,6 +6,7 @@ pub enum Colors {
     LightGray,
     DarkGray,
     Black,
+    Debug,
 }
 
 #[derive(Clone)]
@@ -21,6 +22,7 @@ impl Colors {
             Colors::LightGray => 0xAAAAAA,
             Colors::DarkGray => 0x555555,
             Colors::Black => 0x000000,
+            Colors::Debug => 0xFF0000,
         }
     }
 }
