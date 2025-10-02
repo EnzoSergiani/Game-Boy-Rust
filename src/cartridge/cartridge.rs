@@ -764,13 +764,13 @@ impl Cartridge {
         self.is_nintendo_logo && self.is_header_checksum_valid
     }
 
-    pub fn get_nintendo_logo(&self) -> [Byte; SIZE_NINTENDO_LOGO] {
-        let mut nintendo_logo_dump: [Byte; SIZE_NINTENDO_LOGO] = [DEFAULT_BYTE; SIZE_NINTENDO_LOGO];
-        for address in ADDRESS_NINTENDO_LOGO.start..=ADDRESS_NINTENDO_LOGO.end {
-            nintendo_logo_dump[address - ADDRESS_NINTENDO_LOGO.start] = self.read_rom(address);
-        }
-
-        nintendo_logo_dump
+    pub fn get_title(&self) -> String {
+        let title_bytes: &[u8] = self.title.as_bytes();
+        title_bytes
+            .iter()
+            .take_while(|&&b| b != 0)
+            .map(|&b| b as char)
+            .collect()
     }
 
     pub fn print_data(&self) {

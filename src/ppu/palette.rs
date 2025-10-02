@@ -10,19 +10,18 @@ pub enum Colors {
 }
 
 #[derive(Clone)]
-
 pub struct Palette {
     pub colors: [Colors; 4],
 }
 
 impl Colors {
-    pub fn to_rgb(&self) -> u32 {
+    pub fn to_tuple(&self) -> (f64, f64, f64) {
         match self {
-            Colors::White => 0xFFFFFF,
-            Colors::LightGray => 0xAAAAAA,
-            Colors::DarkGray => 0x555555,
-            Colors::Black => 0x000000,
-            Colors::Debug => 0xFF0000,
+            Colors::White => (1.0, 1.0, 1.0),
+            Colors::LightGray => (0.66, 0.66, 0.66),
+            Colors::DarkGray => (0.33, 0.33, 0.33),
+            Colors::Black => (0.0, 0.0, 0.0),
+            Colors::Debug => (1.0, 0.0, 0.0),
         }
     }
 }

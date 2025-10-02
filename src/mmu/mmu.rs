@@ -1,17 +1,20 @@
 use crate::{
     cartridge::cartridge::Cartridge,
     cpu::cpu::CPU,
+    mmu::boot_rom::BootROM,
     ppu::{
         ppu::{ADDRESS_TILE_MAP, ADDRESS_TILE_SET, PPU},
         tile::Tile,
     },
 };
-use core::panic;
+use std::sync::{Mutex, MutexGuard, OnceLock};
 
 pub type Byte = u8;
 pub type Address = usize;
 pub type Size = usize;
 pub const DEFAULT_BYTE: Byte = 0x0000;
+
+pub static FRAME_COUNTER: OnceLock<Mutex<Byte>> = OnceLock::new();
 
 pub struct AddressRange {
     pub start: Address,
@@ -91,6 +94,18 @@ impl MMU {
             hram: [DEFAULT_BYTE; SIZE_HRAM],
             io: [DEFAULT_BYTE; SIZE_IO],
         }
+    }
+
+    pub fn get_cpu(&mut self) -> &mut CPU {
+        &mut self.cpu
+    }
+
+    pub fn get_ppu(&mut self) -> &mut PPU {
+        &mut self.ppu
+    }
+
+    pub fn get_cartridge(&mut self) -> &Cartridge {
+        &self.cartridge
     }
 
     fn read_wram(&self, address: Address) -> Byte {
@@ -278,42 +293,29 @@ impl MMU {
             panic!("Invalid cartridge inserted!");
         }
         self.cartridge = cartridge;
-        self.boot_ROM();
-    }
-
-    pub fn boot_ROM(&mut self) {
-        // self.cartridge.print_data();
-        self.ppu.reset_vram();
-
-        const SIZE_BOOT_ROM: Size = ADDRESS_BOOT_ROM.end - ADDRESS_BOOT_ROM.start + 1;
-
-        let mut dump: [Byte; SIZE_BOOT_ROM] = [DEFAULT_BYTE; SIZE_BOOT_ROM];
-        for idx in ADDRESS_BOOT_ROM.start..=ADDRESS_BOOT_ROM.end {
-            dump[idx - ADDRESS_BOOT_ROM.start] = self.read_memory(idx)
-        }
-
-        for idx in ADDRESS_TILE_MAP.start..ADDRESS_TILE_MAP.end {
-            self.write_memory(idx, 99);
-        }
-
-        let logo_nintendo: [[Byte; 12]; 32] = self.get_nintendo_logo();
-        self.print_logo(logo_nintendo);
-
-        self.set_wx(0);
-        self.set_wy(160);
-
-        // self.ppu.debug();
     }
 
     pub fn on_frame(&mut self) {
-        let new_wx: Byte = self.get_wx() as Byte;
-        let mut new_wy: Byte = self.get_wy() as Byte;
-        if new_wy > 0 {
-            new_wy -= 1;
-        }
+        self.boot_update_animation();
+    }
 
-        self.set_wx(new_wx);
-        self.set_wy(new_wy);
+    pub fn delay_frames(frames: u8) -> bool {
+        let counter: &Mutex<u8> = FRAME_COUNTER.get_or_init(|| Mutex::new(frames));
+        let mut count: MutexGuard<'_, u8> = counter.lock().unwrap();
+
+        if *count > 0 {
+            *count -= 1;
+            false
+        } else {
+            true
+        }
+    }
+
+    pub fn reset_delay() {
+        if let Some(counter) = FRAME_COUNTER.get() {
+            let mut count: MutexGuard<'_, u8> = counter.lock().unwrap();
+            *count = 0;
+        }
     }
 
     pub fn get_tile(&self, id: Address) -> Tile {
@@ -331,19 +333,15 @@ impl MMU {
         println!("\n");
     }
 
-    pub fn get_wy(&self) -> Address {
-        self.read_io(0xFF4A) as Address
+    pub fn set_screen_position(&mut self, x: Byte, y: Byte) {
+        self.write_io(0xFF4B, x);
+        self.write_io(0xFF4A, y);
     }
 
-    pub fn get_wx(&self) -> Address {
-        self.read_io(0xFF4B) as Address
-    }
-
-    pub fn set_wx(&mut self, value: Byte) {
-        self.write_io(0xFF4B, value);
-    }
-
-    pub fn set_wy(&mut self, value: Byte) {
-        self.write_io(0xFF4A, value);
+    pub fn get_screen_position(&self) -> (Address, Address) {
+        (
+            self.read_io(0xFF4B) as Address,
+            self.read_io(0xFF4A) as Address,
+        )
     }
 }
