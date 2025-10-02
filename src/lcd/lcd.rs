@@ -73,7 +73,7 @@ impl LCD {
                 let tile: Tile = Tile::from_address(mmu, tile_id);
                 let color: Byte = tile.get_pixel(pixel_x, pixel_y);
                 let color: Colors = palette.get_color(color);
-                let (r, g, b) = color.to_tuple();
+                let (r, g, b) = color.to_tuple(false);
 
                 context.set_source_rgb(r, g, b);
                 context.rectangle(screen_x as f64, screen_y as f64, 1.0, 1.0);
@@ -101,7 +101,7 @@ impl LCD {
 
         for y in 0..32 {
             for x in 0..32 {
-                let address_tile_map = ADDRESS::TILE_MAP.start + (y * 32 + x) as Address;
+                let address_tile_map: Address = ADDRESS::TILE_MAP.start + (y * 32 + x) as Address;
                 let tile_id: usize = mmu.read_memory(address_tile_map) as Address;
                 let tile: Tile = Tile::from_address(mmu, tile_id);
 
@@ -109,7 +109,7 @@ impl LCD {
                     for tx in 0..8 {
                         let color: Byte = tile.get_pixel(tx, ty);
                         let color: Colors = palette.get_color(color);
-                        let (r, g, b) = color.to_tuple();
+                        let (r, g, b) = color.to_tuple(false);
 
                         context.set_source_rgb(r, g, b);
                         context.rectangle((x * 8 + tx) as f64, (y * 8 + ty) as f64, 1.0, 1.0);
@@ -136,7 +136,7 @@ impl LCD {
             for (py, row) in pixels.iter().enumerate() {
                 for (px, &pixel) in row.iter().enumerate() {
                     let color: Colors = palette.get_color(pixel);
-                    let (r, g, b) = color.to_tuple();
+                    let (r, g, b) = color.to_tuple(false);
 
                     context.set_source_rgb(r, g, b);
                     context.rectangle(x + (px as f64 * 2.0), y + (py as f64 * 2.0), 2.0, 2.0);
@@ -202,6 +202,7 @@ impl LCD {
         let tiles_per_row: usize = 16;
         let surface_width: i32 = (tiles_per_row as f64 * tile_size) as i32;
         let surface_height: i32 = 256;
+        let deactivate_filter: bool = false;
 
         let surface: ImageSurface =
             ImageSurface::create(Format::Rgb24, surface_width, surface_height).unwrap();
@@ -231,7 +232,7 @@ impl LCD {
             for (py, row) in pixels.iter().enumerate() {
                 for (px, &pixel) in row.iter().enumerate() {
                     let color = palette.get_color(pixel);
-                    let (r, g, b) = color.to_tuple();
+                    let (r, g, b) = color.to_tuple(false);
 
                     context.set_source_rgb(r, g, b);
                     context.rectangle(x + (px as f64 * 2.0), y + (py as f64 * 2.0), 2.0, 2.0);

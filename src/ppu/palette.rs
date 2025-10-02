@@ -15,7 +15,16 @@ pub struct Palette {
 }
 
 impl Colors {
-    pub fn to_tuple(&self) -> (f64, f64, f64) {
+    pub fn to_tuple(&self, green_filter: bool) -> (f64, f64, f64) {
+        if green_filter {
+            return match self {
+                Colors::White => (0.8, 1.0, 0.8),
+                Colors::LightGray => (0.6, 0.8, 0.6),
+                Colors::DarkGray => (0.3, 0.5, 0.3),
+                Colors::Black => (0.1, 0.2, 0.1),
+                Colors::Debug => (1.0, 0.0, 0.0),
+            };
+        } else {
         match self {
             Colors::White => (1.0, 1.0, 1.0),
             Colors::LightGray => (0.66, 0.66, 0.66),
@@ -24,6 +33,7 @@ impl Colors {
             Colors::Debug => (1.0, 0.0, 0.0),
         }
     }
+}
 }
 
 impl Palette {
