@@ -1,4 +1,4 @@
-use crate::mmu::mmu::{Address, Byte};
+use crate::mmu::{address::Address, mmu::Byte};
 
 #[derive(Copy, Clone)]
 pub enum Colors {

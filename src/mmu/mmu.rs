@@ -1,87 +1,24 @@
 use crate::{
     cartridge::cartridge::Cartridge,
     cpu::cpu::CPU,
+    mmu::address::{ADDRESS, Address, Size},
     mmu::boot_rom::BootROM,
-    ppu::{
-        ppu::{ADDRESS_TILE_MAP, ADDRESS_TILE_SET, PPU},
-        tile::Tile,
-    },
+    ppu::{ppu::PPU, tile::Tile},
 };
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 pub type Byte = u8;
-pub type Address = usize;
-pub type Size = usize;
 pub const DEFAULT_BYTE: Byte = 0x0000;
 
 pub static FRAME_COUNTER: OnceLock<Mutex<Byte>> = OnceLock::new();
-
-pub struct AddressRange {
-    pub start: Address,
-    pub end: Address,
-}
-
-pub const ADDRESS_ROM: AddressRange = AddressRange {
-    start: 0x0000,
-    end: 0x7FFF,
-};
-pub const ADDRESS_VRAM: AddressRange = AddressRange {
-    start: 0x8000,
-    end: 0x9FFF,
-};
-pub const ADDRESS_RAM: AddressRange = AddressRange {
-    start: 0xA000,
-    end: 0xBFFF,
-};
-pub const ADDRESS_WRAM: AddressRange = AddressRange {
-    start: 0xC000,
-    end: 0xDFFF,
-};
-pub const ADDRESS_ECHO: AddressRange = AddressRange {
-    start: 0xE000,
-    end: 0xFDFF,
-};
-pub const ADDRESS_OAM: AddressRange = AddressRange {
-    start: 0xFE00,
-    end: 0xFE9F,
-};
-pub const ADDRESS_INVALID_OAM: AddressRange = AddressRange {
-    start: 0xFEA0,
-    end: 0xFEFF,
-};
-pub const ADDRESS_IO: AddressRange = AddressRange {
-    start: 0xFF00,
-    end: 0xFF7F,
-};
-pub const ADDRESS_HRAM: AddressRange = AddressRange {
-    start: 0xFF80,
-    end: 0xFFFE,
-};
-pub const ADDRESS_IE_REGISTER: AddressRange = AddressRange {
-    start: 0xFFFF,
-    end: 0xFFFF,
-};
-pub const ADDRESS_BOOT_ROM: AddressRange = AddressRange {
-    start: 0x0000,
-    end: 0x00FF,
-};
-pub const ADDRESS_NINTENDO_LOGO: AddressRange = AddressRange {
-    start: 0x104,
-    end: 0x133,
-};
-
-const SIZE_WRAM: Size = ADDRESS_WRAM.end - ADDRESS_WRAM.start + 1;
-const SIZE_HRAM: Size = ADDRESS_HRAM.end - ADDRESS_HRAM.start + 1;
-const SIZE_IO: Size = ADDRESS_IO.end - ADDRESS_IO.start + 1;
-pub const SIZE_NINTENDO_LOGO: Size = ADDRESS_NINTENDO_LOGO.end - ADDRESS_NINTENDO_LOGO.start + 1;
 
 pub struct MMU {
     cpu: CPU,
     ppu: PPU,
     cartridge: Cartridge,
-    wram: [Byte; SIZE_WRAM],
-    hram: [Byte; SIZE_HRAM],
-    io: [Byte; SIZE_IO],
+    wram: [Byte; ADDRESS::WRAM.size],
+    hram: [Byte; ADDRESS::HRAM.size],
+    io: [Byte; ADDRESS::IO.size],
 }
 
 impl MMU {
@@ -90,9 +27,9 @@ impl MMU {
             cpu: CPU::new(),
             ppu: PPU::new(),
             cartridge: Cartridge::eject(),
-            wram: [DEFAULT_BYTE; SIZE_WRAM],
-            hram: [DEFAULT_BYTE; SIZE_HRAM],
-            io: [DEFAULT_BYTE; SIZE_IO],
+            wram: [DEFAULT_BYTE; ADDRESS::WRAM.size],
+            hram: [DEFAULT_BYTE; ADDRESS::HRAM.size],
+            io: [DEFAULT_BYTE; ADDRESS::IO.size],
         }
     }
 
@@ -109,49 +46,49 @@ impl MMU {
     }
 
     fn read_wram(&self, address: Address) -> Byte {
-        self.wram[address - ADDRESS_WRAM.start]
+        self.wram[address - ADDRESS::WRAM.start]
     }
 
     fn write_wram(&mut self, address: Address, value: Byte) {
-        self.wram[address - ADDRESS_WRAM.start] = value;
+        self.wram[address - ADDRESS::WRAM.start] = value;
     }
 
     fn read_hram(&self, address: Address) -> Byte {
-        self.hram[address - ADDRESS_HRAM.start]
+        self.hram[address - ADDRESS::HRAM.start]
     }
 
     fn write_hram(&mut self, address: Address, value: Byte) {
-        self.hram[address - ADDRESS_HRAM.start] = value;
+        self.hram[address - ADDRESS::HRAM.start] = value;
     }
 
     fn read_io(&self, address: Address) -> Byte {
-        self.io[address - ADDRESS_IO.start]
+        self.io[address - ADDRESS::IO.start]
     }
 
     fn write_io(&mut self, address: Address, value: Byte) {
-        self.io[address - ADDRESS_IO.start] = value;
+        self.io[address - ADDRESS::IO.start] = value;
     }
 
     pub fn read_memory(&self, address: Address) -> Byte {
-        if address >= ADDRESS_ROM.start && address <= ADDRESS_ROM.end {
+        if address >= ADDRESS::ROM.start && address <= ADDRESS::ROM.end {
             self.cartridge.read_rom(address)
-        } else if address >= ADDRESS_VRAM.start && address <= ADDRESS_VRAM.end {
+        } else if address >= ADDRESS::VRAM.start && address <= ADDRESS::VRAM.end {
             self.ppu.read_vram(address)
-        } else if address >= ADDRESS_RAM.start && address <= ADDRESS_RAM.end {
+        } else if address >= ADDRESS::RAM.start && address <= ADDRESS::RAM.end {
             self.cartridge.read_ram(address)
-        } else if address >= ADDRESS_WRAM.start && address <= ADDRESS_WRAM.end {
+        } else if address >= ADDRESS::WRAM.start && address <= ADDRESS::WRAM.end {
             self.read_wram(address)
-        } else if address >= ADDRESS_ECHO.start && address <= ADDRESS_ECHO.end {
+        } else if address >= ADDRESS::ECHO.start && address <= ADDRESS::ECHO.end {
             0xFF
-        } else if address >= ADDRESS_OAM.start && address <= ADDRESS_OAM.end {
+        } else if address >= ADDRESS::OAM.start && address <= ADDRESS::OAM.end {
             self.ppu.read_oam(address)
-        } else if address >= ADDRESS_INVALID_OAM.start && address <= ADDRESS_INVALID_OAM.end {
+        } else if address >= ADDRESS::INVALID_OAM.start && address <= ADDRESS::INVALID_OAM.end {
             0xFF
-        } else if address >= ADDRESS_IO.start && address <= ADDRESS_IO.end {
+        } else if address >= ADDRESS::IO.start && address <= ADDRESS::IO.end {
             self.read_io(address)
-        } else if address >= ADDRESS_HRAM.start && address <= ADDRESS_HRAM.end {
+        } else if address >= ADDRESS::HRAM.start && address <= ADDRESS::HRAM.end {
             self.read_hram(address)
-        } else if address >= ADDRESS_IE_REGISTER.start && address <= ADDRESS_IE_REGISTER.end {
+        } else if address >= ADDRESS::IE_REGISTER.start && address <= ADDRESS::IE_REGISTER.end {
             0xFF
         } else {
             panic!("Invalid memory read at address: 0x{:04X}", address);
@@ -159,29 +96,29 @@ impl MMU {
     }
 
     pub fn write_memory(&mut self, address: Address, value: Byte) {
-        if address >= ADDRESS_ROM.start && address <= ADDRESS_ROM.end {
+        if address >= ADDRESS::ROM.start && address <= ADDRESS::ROM.end {
             println!(
                 "Tentative d'écriture en ROM à 0x{:04X} avec valeur 0x{:02X}",
                 address, value
             );
             // panic!("Cannot write to ROM address: 0x{:04X}", address);
-        } else if address >= ADDRESS_VRAM.start && address <= ADDRESS_VRAM.end {
+        } else if address >= ADDRESS::VRAM.start && address <= ADDRESS::VRAM.end {
             self.ppu.write_vram(address, value);
-        } else if address >= ADDRESS_RAM.start && address <= ADDRESS_RAM.end {
+        } else if address >= ADDRESS::RAM.start && address <= ADDRESS::RAM.end {
             self.cartridge.write_ram(address, value);
-        } else if address >= ADDRESS_WRAM.start && address <= ADDRESS_WRAM.end {
+        } else if address >= ADDRESS::WRAM.start && address <= ADDRESS::WRAM.end {
             self.write_wram(address, value);
-        } else if address >= ADDRESS_ECHO.start && address <= ADDRESS_ECHO.end {
+        } else if address >= ADDRESS::ECHO.start && address <= ADDRESS::ECHO.end {
             // Do nothing
-        } else if address >= ADDRESS_OAM.start && address <= ADDRESS_OAM.end {
+        } else if address >= ADDRESS::OAM.start && address <= ADDRESS::OAM.end {
             self.ppu.write_oam(address, value);
-        } else if address >= ADDRESS_INVALID_OAM.start && address <= ADDRESS_INVALID_OAM.end {
+        } else if address >= ADDRESS::INVALID_OAM.start && address <= ADDRESS::INVALID_OAM.end {
             // Do nothing
-        } else if address >= ADDRESS_IO.start && address <= ADDRESS_IO.end {
+        } else if address >= ADDRESS::IO.start && address <= ADDRESS::IO.end {
             self.write_io(address, value);
-        } else if address >= ADDRESS_HRAM.start && address <= ADDRESS_HRAM.end {
+        } else if address >= ADDRESS::HRAM.start && address <= ADDRESS::HRAM.end {
             self.write_hram(address, value);
-        } else if address >= ADDRESS_IE_REGISTER.start && address <= ADDRESS_IE_REGISTER.end {
+        } else if address >= ADDRESS::IE_REGISTER.start && address <= ADDRESS::IE_REGISTER.end {
             // Do nothing
         } else {
             panic!("Invalid memory write at address: 0x{:04X}", address);
@@ -189,16 +126,17 @@ impl MMU {
     }
 
     pub fn get_nintendo_logo(&mut self) -> [[Byte; 12]; 32] {
-        let mut logo_bytes_compressed: [Byte; SIZE_NINTENDO_LOGO] =
-            [DEFAULT_BYTE; SIZE_NINTENDO_LOGO];
-        for (idx, address) in (ADDRESS_NINTENDO_LOGO.start..=ADDRESS_NINTENDO_LOGO.end).enumerate()
+        let mut logo_bytes_compressed: [Byte; ADDRESS::NINTENDO_LOGO.size] =
+            [DEFAULT_BYTE; ADDRESS::NINTENDO_LOGO.size];
+        for (idx, address) in
+            (ADDRESS::NINTENDO_LOGO.start..=ADDRESS::NINTENDO_LOGO.end).enumerate()
         {
             logo_bytes_compressed[idx] = self.read_memory(address);
         }
 
-        let logo_bytes_1: [Byte; SIZE_NINTENDO_LOGO / 2] =
+        let logo_bytes_1: [Byte; ADDRESS::NINTENDO_LOGO.size / 2] =
             logo_bytes_compressed[0..24].try_into().unwrap();
-        let logo_bytes_2: [Byte; SIZE_NINTENDO_LOGO / 2] =
+        let logo_bytes_2: [Byte; ADDRESS::NINTENDO_LOGO.size / 2] =
             logo_bytes_compressed[24..48].try_into().unwrap();
 
         let mut logo_matrix_compressed: [[Byte; 6]; 8] = [[DEFAULT_BYTE; 6]; 8];
@@ -271,7 +209,7 @@ impl MMU {
             }
 
             for (i, byte) in column_bytes.iter().enumerate() {
-                self.write_memory(ADDRESS_TILE_SET.start + col * 32 + i, *byte);
+                self.write_memory(ADDRESS::TILE_SET.start + col * 32 + i, *byte);
             }
         }
 
@@ -280,9 +218,9 @@ impl MMU {
 
         for tile_id in 0..13 {
             let tile_map_addr_row1: Address =
-                ADDRESS_TILE_MAP.start + (pox_y * 32) + (pox_x + tile_id);
+                ADDRESS::TILE_MAP.start + (pox_y * 32) + (pox_x + tile_id);
             let tile_map_addr_row2: Address =
-                ADDRESS_TILE_MAP.start + ((pox_y + 1) * 32) + (pox_x + tile_id);
+                ADDRESS::TILE_MAP.start + ((pox_y + 1) * 32) + (pox_x + tile_id);
             self.write_memory(tile_map_addr_row1, (tile_id * 2) as Byte);
             self.write_memory(tile_map_addr_row2, (tile_id * 2 + 1) as Byte);
         }

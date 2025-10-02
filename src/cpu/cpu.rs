@@ -1,7 +1,12 @@
 use crate::{
-    cartridge::cartridge::Cartridge,
-    cpu::{instructions::Instructions, registers::Registers},
-    mmu::mmu::{Address, Byte, MMU},
+    cpu::{
+        instructions::Instructions,
+        registers::{Register16, Registers},
+    },
+    mmu::{
+        address::Address,
+        mmu::{Byte, MMU},
+    },
 };
 
 #[derive(Copy, Clone)]

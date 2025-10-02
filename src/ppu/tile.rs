@@ -1,6 +1,6 @@
-use crate::{
-    mmu::mmu::{Address, Byte, DEFAULT_BYTE, MMU},
-    ppu::ppu::ADDRESS_TILE_SET,
+use crate::mmu::{
+    address::{ADDRESS, Address},
+    mmu::{Byte, DEFAULT_BYTE, MMU},
 };
 
 pub struct Tile {
@@ -24,7 +24,7 @@ impl Tile {
     }
 
     pub fn from_address(mmu: &mut MMU, tile_id: Address) -> Tile {
-        let address_start: Address = ADDRESS_TILE_SET.start + tile_id * 16;
+        let address_start: Address = ADDRESS::TILE_SET.start + tile_id * 16;
         let mut pixels: [[Byte; 8]; 8] = [[DEFAULT_BYTE; 8]; 8];
         for row in 0..8 {
             let low: Byte = mmu.read_memory(address_start + row * 2);

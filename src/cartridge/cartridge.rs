@@ -1,16 +1,11 @@
 use std::fs;
 
-use crate::mmu::mmu::{
-    ADDRESS_NINTENDO_LOGO, ADDRESS_RAM, ADDRESS_ROM, Address, AddressRange, Byte, DEFAULT_BYTE,
-    SIZE_NINTENDO_LOGO, Size,
-};
-
-const SIZE_RAM: Size = ADDRESS_RAM.end - ADDRESS_RAM.start + 1;
-const SIZE_ROM: Size = ADDRESS_ROM.end - ADDRESS_ROM.start + 1;
+use crate::mmu::address::{ADDRESS, Address, AddressRange, Size};
+use crate::mmu::mmu::{Byte, DEFAULT_BYTE};
 
 pub struct Cartridge {
-    rom: [Byte; SIZE_ROM],
-    ram: [Byte; SIZE_RAM],
+    rom: [Byte; ADDRESS::ROM.size],
+    ram: [Byte; ADDRESS::RAM.size],
     entry_point: Address,
     title: String,
     manufacturer_code: Byte,
@@ -278,8 +273,8 @@ impl Cartridge {
         let bytes_result: Result<Vec<Byte>, &'static str> = Cartridge::read(path);
         match bytes_result {
             Ok(bytes) => {
-                let rom: [Byte; SIZE_ROM] = Cartridge::extract_rom(&bytes);
-                let ram: [Byte; SIZE_RAM] = Cartridge::extract_ram(&bytes);
+                let rom: [Byte; ADDRESS::ROM.size] = Cartridge::extract_rom(&bytes);
+                let ram: [Byte; ADDRESS::RAM.size] = Cartridge::extract_ram(&bytes);
                 let entry_point: Address = Cartridge::extract_entry_point();
                 let title: String = Cartridge::extract_title(&bytes);
                 let manufacturer_code: Byte = Cartridge::extract_manufacturer_code(&bytes);
@@ -324,40 +319,34 @@ impl Cartridge {
     }
 
     fn is_nintendo_logo(bytes: &[Byte]) -> bool {
-        const ADDRESS_NINTENDO_LOGO_DUMP: AddressRange = AddressRange {
-            start: 0x104,
-            end: 0x133,
-        };
-        const SIZE_NINTENDO_LOGO_DUMP: Size =
-            ADDRESS_NINTENDO_LOGO_DUMP.end - ADDRESS_NINTENDO_LOGO_DUMP.start + 1;
-        let mut nintendo_logo_dump: [Byte; SIZE_NINTENDO_LOGO_DUMP] =
-            [DEFAULT_BYTE; SIZE_NINTENDO_LOGO_DUMP];
-        for address in ADDRESS_NINTENDO_LOGO_DUMP.start..=ADDRESS_NINTENDO_LOGO_DUMP.end {
-            nintendo_logo_dump[address - ADDRESS_NINTENDO_LOGO_DUMP.start] = bytes[address];
+        let mut nintendo_logo_cartridge: [Byte; ADDRESS::NINTENDO_LOGO.size] =
+            [DEFAULT_BYTE; ADDRESS::NINTENDO_LOGO.size];
+        for address in ADDRESS::NINTENDO_LOGO.start..=ADDRESS::NINTENDO_LOGO.end {
+            nintendo_logo_cartridge[address - ADDRESS::NINTENDO_LOGO.start] = bytes[address];
         }
 
-        let valid_logo: [Byte; SIZE_NINTENDO_LOGO_DUMP] = [
+        let valid_logo: [Byte; ADDRESS::NINTENDO_LOGO.size] = [
             0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C,
             0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6,
             0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC,
             0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
         ];
 
-        nintendo_logo_dump == valid_logo
+        nintendo_logo_cartridge == valid_logo
     }
 
-    fn extract_rom(bytes: &[Byte]) -> [Byte; SIZE_ROM] {
-        let mut rom: [Byte; SIZE_ROM] = [DEFAULT_BYTE; SIZE_ROM];
-        for address in ADDRESS_ROM.start..=ADDRESS_ROM.end {
-            rom[address - ADDRESS_ROM.start] = bytes[address];
+    fn extract_rom(bytes: &[Byte]) -> [Byte; ADDRESS::ROM.size] {
+        let mut rom: [Byte; ADDRESS::ROM.size] = [DEFAULT_BYTE; ADDRESS::ROM.size];
+        for address in ADDRESS::ROM.start..=ADDRESS::ROM.end {
+            rom[address - ADDRESS::ROM.start] = bytes[address];
         }
         rom
     }
 
-    fn extract_ram(bytes: &[Byte]) -> [Byte; SIZE_RAM] {
-        let mut ram: [Byte; SIZE_RAM] = [DEFAULT_BYTE; SIZE_RAM];
-        for address in ADDRESS_RAM.start..=ADDRESS_RAM.end {
-            ram[address - ADDRESS_RAM.start] = bytes[address];
+    fn extract_ram(bytes: &[Byte]) -> [Byte; ADDRESS::RAM.size] {
+        let mut ram: [Byte; ADDRESS::RAM.size] = [DEFAULT_BYTE; ADDRESS::RAM.size];
+        for address in ADDRESS::RAM.start..=ADDRESS::RAM.end {
+            ram[address - ADDRESS::RAM.start] = bytes[address];
         }
         ram
     }
@@ -716,8 +705,8 @@ impl Cartridge {
 
     pub fn eject() -> Self {
         Cartridge {
-            rom: [DEFAULT_BYTE; SIZE_ROM],
-            ram: [DEFAULT_BYTE; SIZE_RAM],
+            rom: [DEFAULT_BYTE; ADDRESS::ROM.size],
+            ram: [DEFAULT_BYTE; ADDRESS::RAM.size],
             entry_point: 0,
             title: "none".to_string(),
             manufacturer_code: 0,
@@ -738,25 +727,25 @@ impl Cartridge {
         self.entry_point
     }
 
-    pub fn get_rom(&self) -> [Byte; SIZE_ROM] {
+    pub fn get_rom(&self) -> [Byte; ADDRESS::ROM.size] {
         self.rom
     }
 
     pub fn read_rom(&self, address: Address) -> Byte {
-        self.rom[address - ADDRESS_ROM.start]
+        self.rom[address - ADDRESS::ROM.start]
     }
 
-    pub fn get_ram(&self) -> [Byte; SIZE_RAM] {
+    pub fn get_ram(&self) -> [Byte; ADDRESS::RAM.size] {
         self.ram
     }
 
     pub fn read_ram(&self, address: Address) -> Byte {
-        let shift: Address = address - ADDRESS_RAM.start;
+        let shift: Address = address - ADDRESS::RAM.start;
         self.ram[shift]
     }
 
     pub fn write_ram(&mut self, address: Address, value: Byte) {
-        let shift: Address = address - ADDRESS_RAM.start;
+        let shift: Address = address - ADDRESS::RAM.start;
         self.ram[shift] = value;
     }
 

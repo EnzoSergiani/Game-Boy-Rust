@@ -1,5 +1,7 @@
-use super::mmu::{Byte, MMU};
-use crate::ppu::ppu::ADDRESS_TILE_MAP;
+use super::{
+    address::ADDRESS,
+    mmu::{Byte, MMU},
+};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 pub struct BootAnimation {
@@ -55,7 +57,7 @@ impl BootROM for MMU {
         self.get_cartridge().print_data();
         self.get_ppu().reset_vram();
 
-        for idx in ADDRESS_TILE_MAP.start..ADDRESS_TILE_MAP.end {
+        for idx in ADDRESS::TILE_MAP.start..ADDRESS::TILE_MAP.end {
             self.write_memory(idx, 99);
         }
 

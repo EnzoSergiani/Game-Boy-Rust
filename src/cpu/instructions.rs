@@ -3,7 +3,10 @@ use crate::{
         cpu::{CPU, IME},
         registers::{Flags, Register8, Register16, Registers8, Registers16},
     },
-    mmu::mmu::{Address, Byte, MMU},
+    mmu::{
+        address::Address,
+        mmu::{Byte, MMU},
+    },
 };
 
 #[allow(non_camel_case_types)]

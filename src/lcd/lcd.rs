@@ -1,8 +1,10 @@
 use crate::{
-    mmu::mmu::{Address, AddressRange, Byte, MMU},
+    mmu::{
+        address::{ADDRESS, Address},
+        mmu::{Byte, MMU},
+    },
     ppu::{
         palette::{Colors, Palette},
-        ppu::{ADDRESS_TILE_MAP, ADDRESS_TILE_SET},
         tile::Tile,
     },
 };
@@ -35,7 +37,6 @@ impl LCD {
         let context = Context::new(&surface).unwrap();
         context.scale(self.scale as f64, self.scale as f64);
 
-        let tile_map_start: AddressRange = ADDRESS_TILE_MAP;
         let palette: Palette = Palette::from_colors(
             Colors::White,
             Colors::LightGray,
@@ -67,7 +68,7 @@ impl LCD {
                 let pixel_x: Address = (map_x % 8) as Address;
                 let pixel_y: Address = (map_y % 8) as Address;
 
-                let tile_address: Address = tile_map_start.start + (tile_y * 32 + tile_x);
+                let tile_address: Address = ADDRESS::TILE_MAP.start + (tile_y * 32 + tile_x);
                 let tile_id: Address = mmu.read_memory(tile_address) as Address;
                 let tile: Tile = Tile::from_address(mmu, tile_id);
                 let color: Byte = tile.get_pixel(pixel_x, pixel_y);
@@ -91,7 +92,6 @@ impl LCD {
         context.set_source_rgb(1.0, 1.0, 1.0);
         context.paint().unwrap();
 
-        let tile_map_start: AddressRange = ADDRESS_TILE_MAP;
         let palette: Palette = Palette::from_colors(
             Colors::White,
             Colors::LightGray,
@@ -101,7 +101,7 @@ impl LCD {
 
         for y in 0..32 {
             for x in 0..32 {
-                let address_tile_map = tile_map_start.start + (y * 32 + x) as Address;
+                let address_tile_map = ADDRESS::TILE_MAP.start + (y * 32 + x) as Address;
                 let tile_id: usize = mmu.read_memory(address_tile_map) as Address;
                 let tile: Tile = Tile::from_address(mmu, tile_id);
 
@@ -120,7 +120,7 @@ impl LCD {
         }
 
         let tile_set_x: f64 = 256.0 + 20.0;
-        let vram_tile_count: usize = (ADDRESS_TILE_SET.end - ADDRESS_TILE_SET.start + 1) / 16;
+        let vram_tile_count: usize = (ADDRESS::TILE_SET.end - ADDRESS::TILE_SET.start + 1) / 16;
         let tiles_per_row: usize = 16;
         let tile_size: f64 = 16.0;
 
@@ -217,7 +217,7 @@ impl LCD {
             Colors::Black,
         );
 
-        let vram_tile_count: usize = (ADDRESS_TILE_SET.end - ADDRESS_TILE_SET.start + 1) / 16;
+        let vram_tile_count: usize = (ADDRESS::TILE_SET.end - ADDRESS::TILE_SET.start + 1) / 16;
 
         for tile_id in 0..vram_tile_count {
             let row: f64 = (tile_id / tiles_per_row) as f64;
