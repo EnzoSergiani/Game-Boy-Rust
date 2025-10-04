@@ -1,6 +1,6 @@
 mod cartridge;
 pub mod common;
-// mod cpu;
+mod cpu;
 mod emulator;
 mod mmu;
 mod ppu;

@@ -1,9 +1,9 @@
 use crate::{
+    common::types::Byte,
     cpu::{
         cpu::CPU,
         registers::{Flags, Registers8, Registers16},
     },
-    mmu::mmu::Byte,
 };
 
 use chrono::{Local, Timelike};

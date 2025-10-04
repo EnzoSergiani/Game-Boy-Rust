@@ -1,5 +1,4 @@
-pub type Register8 = u8;
-pub type Register16 = u16;
+use crate::common::types::{Register8, Register16};
 
 pub struct Registers {
     a: Register8,
