@@ -1,11 +1,15 @@
 use crate::{
+    common::{
+        address::{
+            ECHO, HRAM, IE_REGISTER, INVALID_OAM, IO, NINTENDO_LOGO, OAM, RAM, ROM, TILE_MAP,
+            TILE_SET, VRAM, WRAM,
+        },
+        constant::DEFAULT_BYTE,
+        types::{Address, Byte},
+    },
     cpu::{
         cpu::{CPU, IME},
         registers::{Flags, Register8, Register16, Registers8, Registers16},
-    },
-    mmu::{
-        address::Address,
-        mmu::{Byte, MMU},
     },
 };
 

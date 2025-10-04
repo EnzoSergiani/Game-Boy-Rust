@@ -1,11 +1,14 @@
 use std::fs;
 
-use crate::mmu::address::{ADDRESS, Address, AddressRange, Size};
-use crate::mmu::mmu::{Byte, DEFAULT_BYTE};
+use crate::common::{
+    address::{NINTENDO_LOGO, RAM, ROM},
+    constant::DEFAULT_BYTE,
+    types::{Address, Byte, Size},
+};
 
 pub struct Cartridge {
-    rom: [Byte; ADDRESS::ROM.size],
-    ram: [Byte; ADDRESS::RAM.size],
+    rom: [Byte; ROM.size],
+    ram: [Byte; RAM.size],
     entry_point: Address,
     title: String,
     manufacturer_code: Byte,
@@ -273,8 +276,8 @@ impl Cartridge {
         let bytes_result: Result<Vec<Byte>, &'static str> = Cartridge::read(path);
         match bytes_result {
             Ok(bytes) => {
-                let rom: [Byte; ADDRESS::ROM.size] = Cartridge::extract_rom(&bytes);
-                let ram: [Byte; ADDRESS::RAM.size] = Cartridge::extract_ram(&bytes);
+                let rom: [Byte; ROM.size] = Cartridge::extract_rom(&bytes);
+                let ram: [Byte; RAM.size] = Cartridge::extract_ram(&bytes);
                 let entry_point: Address = Cartridge::extract_entry_point();
                 let title: String = Cartridge::extract_title(&bytes);
                 let manufacturer_code: Byte = Cartridge::extract_manufacturer_code(&bytes);
@@ -319,13 +322,13 @@ impl Cartridge {
     }
 
     fn is_nintendo_logo(bytes: &[Byte]) -> bool {
-        let mut nintendo_logo_cartridge: [Byte; ADDRESS::NINTENDO_LOGO.size] =
-            [DEFAULT_BYTE; ADDRESS::NINTENDO_LOGO.size];
-        for address in ADDRESS::NINTENDO_LOGO.start..=ADDRESS::NINTENDO_LOGO.end {
-            nintendo_logo_cartridge[address - ADDRESS::NINTENDO_LOGO.start] = bytes[address];
+        let mut nintendo_logo_cartridge: [Byte; NINTENDO_LOGO.size] =
+            [DEFAULT_BYTE; NINTENDO_LOGO.size];
+        for address in NINTENDO_LOGO.start..=NINTENDO_LOGO.end {
+            nintendo_logo_cartridge[address - NINTENDO_LOGO.start] = bytes[address];
         }
 
-        let valid_logo: [Byte; ADDRESS::NINTENDO_LOGO.size] = [
+        let valid_logo: [Byte; NINTENDO_LOGO.size] = [
             0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C,
             0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6,
             0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC,
@@ -335,18 +338,18 @@ impl Cartridge {
         nintendo_logo_cartridge == valid_logo
     }
 
-    fn extract_rom(bytes: &[Byte]) -> [Byte; ADDRESS::ROM.size] {
-        let mut rom: [Byte; ADDRESS::ROM.size] = [DEFAULT_BYTE; ADDRESS::ROM.size];
-        for address in ADDRESS::ROM.start..=ADDRESS::ROM.end {
-            rom[address - ADDRESS::ROM.start] = bytes[address];
+    fn extract_rom(bytes: &[Byte]) -> [Byte; ROM.size] {
+        let mut rom: [Byte; ROM.size] = [DEFAULT_BYTE; ROM.size];
+        for address in ROM.start..=ROM.end {
+            rom[address - ROM.start] = bytes[address];
         }
         rom
     }
 
-    fn extract_ram(bytes: &[Byte]) -> [Byte; ADDRESS::RAM.size] {
-        let mut ram: [Byte; ADDRESS::RAM.size] = [DEFAULT_BYTE; ADDRESS::RAM.size];
-        for address in ADDRESS::RAM.start..=ADDRESS::RAM.end {
-            ram[address - ADDRESS::RAM.start] = bytes[address];
+    fn extract_ram(bytes: &[Byte]) -> [Byte; RAM.size] {
+        let mut ram: [Byte; RAM.size] = [DEFAULT_BYTE; RAM.size];
+        for address in RAM.start..=RAM.end {
+            ram[address - RAM.start] = bytes[address];
         }
         ram
     }
@@ -705,8 +708,8 @@ impl Cartridge {
 
     pub fn eject() -> Self {
         Cartridge {
-            rom: [DEFAULT_BYTE; ADDRESS::ROM.size],
-            ram: [DEFAULT_BYTE; ADDRESS::RAM.size],
+            rom: [DEFAULT_BYTE; ROM.size],
+            ram: [DEFAULT_BYTE; RAM.size],
             entry_point: 0,
             title: "none".to_string(),
             manufacturer_code: 0,
@@ -727,25 +730,25 @@ impl Cartridge {
         self.entry_point
     }
 
-    pub fn get_rom(&self) -> [Byte; ADDRESS::ROM.size] {
+    pub fn get_rom(&self) -> [Byte; ROM.size] {
         self.rom
     }
 
     pub fn read_rom(&self, address: Address) -> Byte {
-        self.rom[address - ADDRESS::ROM.start]
+        self.rom[address - ROM.start]
     }
 
-    pub fn get_ram(&self) -> [Byte; ADDRESS::RAM.size] {
+    pub fn get_ram(&self) -> [Byte; RAM.size] {
         self.ram
     }
 
     pub fn read_ram(&self, address: Address) -> Byte {
-        let shift: Address = address - ADDRESS::RAM.start;
+        let shift: Address = address - RAM.start;
         self.ram[shift]
     }
 
     pub fn write_ram(&mut self, address: Address, value: Byte) {
-        let shift: Address = address - ADDRESS::RAM.start;
+        let shift: Address = address - RAM.start;
         self.ram[shift] = value;
     }
 
@@ -760,6 +763,64 @@ impl Cartridge {
             .take_while(|&&b| b != 0)
             .map(|&b| b as char)
             .collect()
+    }
+
+    pub fn get_nintendo_logo(&mut self) -> [[Byte; 12]; 32] {
+        let mut logo_bytes_compressed: [Byte; NINTENDO_LOGO.size] =
+            [DEFAULT_BYTE; NINTENDO_LOGO.size];
+        for (idx, address) in (NINTENDO_LOGO.start..=NINTENDO_LOGO.end).enumerate() {
+            logo_bytes_compressed[idx] = self.read_rom(address);
+        }
+
+        let logo_bytes_1: [Byte; NINTENDO_LOGO.size / 2] =
+            logo_bytes_compressed[0..24].try_into().unwrap();
+        let logo_bytes_2: [Byte; NINTENDO_LOGO.size / 2] =
+            logo_bytes_compressed[24..48].try_into().unwrap();
+
+        let mut logo_matrix_compressed: [[Byte; 6]; 8] = [[DEFAULT_BYTE; 6]; 8];
+        for block in 0..2 {
+            let logo_bytes_block: &[u8; _] = if block == 0 {
+                &logo_bytes_1
+            } else {
+                &logo_bytes_2
+            };
+            for col in 0..12 {
+                for row in 0..4 {
+                    let idx = col * 4 + row;
+                    let byte = logo_bytes_block[idx / 2];
+                    let nibble = if idx % 2 == 0 { byte >> 4 } else { byte & 0x0F };
+                    let matrix_row = row + block * 4;
+                    let matrix_col = col / 2;
+                    if col % 2 == 0 && matrix_col < 6 {
+                        logo_matrix_compressed[matrix_row][matrix_col] = nibble << 4;
+                    } else if col % 2 == 1 && matrix_col < 6 {
+                        logo_matrix_compressed[matrix_row][matrix_col] |= nibble;
+                    }
+                }
+            }
+        }
+
+        let mut logo_matrix_decompressed: [[Byte; 12]; 32] = [[DEFAULT_BYTE; 12]; 32];
+        for row in 0..8 {
+            for col in 0..6 {
+                let byte = logo_matrix_compressed[row][col];
+                for bit in 0..8 {
+                    let pixel_on = (byte >> (7 - bit)) & 1;
+                    let out_row = row * 4;
+                    let out_col = col * 2 + (bit / 4);
+                    let bit_in_byte = (bit % 4) * 2;
+
+                    if pixel_on == 1 {
+                        for dr in 0..4 {
+                            logo_matrix_decompressed[out_row + dr][out_col] |=
+                                0b11 << (6 - bit_in_byte);
+                        }
+                    }
+                }
+            }
+        }
+
+        logo_matrix_decompressed
     }
 
     pub fn print_data(&self) {

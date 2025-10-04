@@ -33,11 +33,11 @@ impl CPU {
         }
     }
 
-    pub fn start(&mut self, cartridge: &Cartridge) {
-        self.set_status(IME::Enabled);
-        let entry_point: Byte = cartridge.get_entry_point();
-        self.registers.set_program_counter(entry_point as u16);
-    }
+    // pub fn start(&mut self, cartridge: &Cartridge) {
+    //     self.set_status(IME::Enabled);
+    //     let entry_point: Byte = cartridge.get_entry_point();
+    //     self.registers.set_program_counter(entry_point as u16);
+    // }
 
     pub fn get_status(&self) -> IME {
         self.status

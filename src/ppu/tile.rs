@@ -1,6 +1,10 @@
-use crate::mmu::{
-    address::{ADDRESS, Address},
-    mmu::{Byte, DEFAULT_BYTE, MMU},
+use crate::{
+    common::{
+        address::TILE_SET,
+        constant::DEFAULT_BYTE,
+        types::{Address, Byte},
+    },
+    ppu::ppu::PPU,
 };
 
 pub struct Tile {
@@ -23,20 +27,13 @@ impl Tile {
         Tile { pixels }
     }
 
-    pub fn from_address(mmu: &mut MMU, tile_id: Address) -> Tile {
-        let address_start: Address = ADDRESS::TILE_SET.start + tile_id * 16;
-        let mut pixels: [[Byte; 8]; 8] = [[DEFAULT_BYTE; 8]; 8];
-        for row in 0..8 {
-            let low: Byte = mmu.read_memory(address_start + row * 2);
-            let high: Byte = mmu.read_memory(address_start + row * 2 + 1);
-            for col in 0..8 {
-                let bit: usize = 7 - col;
-                let l: Byte = (low >> bit) & 1;
-                let h: Byte = (high >> bit) & 1;
-                pixels[row][col] = (h << 1) | l;
-            }
+    pub fn from_address(ppu: &PPU, tile_id: Address) -> Tile {
+        let address_start: Address = TILE_SET.start + tile_id * 16;
+        let mut bytes: [Byte; 16] = [DEFAULT_BYTE; 16];
+        for i in 0..16 {
+            bytes[i] = ppu.read_vram(address_start + i);
         }
-        Tile { pixels }
+        Tile::from_bytes(bytes)
     }
 
     pub fn get_pixel(&self, x: usize, y: usize) -> Byte {

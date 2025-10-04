@@ -1,7 +1,7 @@
 use crate::{
     cartridge::cartridge::Cartridge,
-    lcd::lcd::LCD,
     mmu::{boot_rom::BootROM, mmu::MMU},
+    ppu::lcd::LCD,
 };
 use {
     cairo::{Context, ImageSurface},
@@ -93,7 +93,9 @@ impl Emulator {
         let scale_y: f64 = (window_height - 2.0 * MARGIN) / lcd_height as f64;
         let scale: f64 = scale_x.min(scale_y);
 
-        let frame_data: ImageSurface = lcd.render_frame(mmu);
+        // --- Correction ici ---
+        let ppu = mmu.get_ppu();
+        let frame_data: ImageSurface = lcd.render_frame(ppu);
 
         let surface: ImageSurface = frame_data;
         let scaled_width: f64 = lcd_width as f64 * scale;
@@ -126,7 +128,8 @@ impl Emulator {
         cr.translate(pos_x, pos_y);
         cr.scale(scale, scale);
 
-        let surface: ImageSurface = lcd.render_debug_tile_map(mmu);
+        let ppu: &mut crate::ppu::ppu::PPU = mmu.get_ppu();
+        let surface: ImageSurface = lcd.render_debug_tile_map(ppu);
 
         cr.set_source_surface(&surface, 0.0, 0.0)
             .expect("Impossible de définir la source de débogage");
@@ -234,7 +237,8 @@ impl Emulator {
 
         tileset_area.set_draw_func(move |_, cr, width, height| {
             if let Ok(mut mmu) = mmu_clone2.lock() {
-                let surface: ImageSurface = lcd_tile_set.render_tile_set(&mut mmu);
+                let ppu = mmu.get_ppu();
+                let surface: ImageSurface = lcd_tile_set.render_tile_set(ppu);
                 let scale: f64 = f64::min(width as f64 / 256.0, height as f64 / 256.0);
 
                 let x: f64 = (width as f64 - (256.0 * scale)) / 2.0;

@@ -1,4 +1,4 @@
-use crate::mmu::{address::Address, mmu::Byte};
+use crate::common::types::{Address, Byte};
 
 #[derive(Copy, Clone)]
 pub enum Colors {
@@ -25,15 +25,15 @@ impl Colors {
                 Colors::Debug => (1.0, 0.0, 0.0),
             };
         } else {
-        match self {
-            Colors::White => (1.0, 1.0, 1.0),
-            Colors::LightGray => (0.66, 0.66, 0.66),
-            Colors::DarkGray => (0.33, 0.33, 0.33),
-            Colors::Black => (0.0, 0.0, 0.0),
-            Colors::Debug => (1.0, 0.0, 0.0),
+            match self {
+                Colors::White => (1.0, 1.0, 1.0),
+                Colors::LightGray => (0.66, 0.66, 0.66),
+                Colors::DarkGray => (0.33, 0.33, 0.33),
+                Colors::Black => (0.0, 0.0, 0.0),
+                Colors::Debug => (1.0, 0.0, 0.0),
+            }
         }
     }
-}
 }
 
 impl Palette {

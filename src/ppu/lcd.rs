@@ -1,10 +1,11 @@
 use crate::{
-    mmu::{
-        address::{ADDRESS, Address},
-        mmu::{Byte, MMU},
+    common::{
+        address::TILE_SET,
+        types::{Address, Byte},
     },
     ppu::{
         palette::{Colors, Palette},
+        ppu::PPU,
         tile::Tile,
     },
 };
@@ -27,7 +28,7 @@ impl LCD {
         }
     }
 
-    pub fn render_frame(&mut self, mmu: &mut MMU) -> ImageSurface {
+    pub fn render_frame(&mut self, ppu: &mut PPU) -> ImageSurface {
         let surface: ImageSurface = ImageSurface::create(
             Format::Rgb24,
             (self.screen_width * self.scale) as i32,
@@ -44,12 +45,12 @@ impl LCD {
             Colors::Black,
         );
 
-        let (wx, wy) = mmu.get_screen_position();
+        let (scx, scy) = ppu.get_screen_scroll();
 
         for screen_y in 0..self.screen_height {
             for screen_x in 0..self.screen_width {
-                let mut map_x: i32 = wx as i32 + screen_x;
-                let mut map_y: i32 = wy as i32 + screen_y;
+                let mut map_x: i32 = scx as i32 + screen_x;
+                let mut map_y: i32 = scy as i32 + screen_y;
 
                 if map_x >= 256 {
                     map_x -= 256;
@@ -68,9 +69,8 @@ impl LCD {
                 let pixel_x: Address = (map_x % 8) as Address;
                 let pixel_y: Address = (map_y % 8) as Address;
 
-                let tile_address: Address = ADDRESS::TILE_MAP.start + (tile_y * 32 + tile_x);
-                let tile_id: Address = mmu.read_memory(tile_address) as Address;
-                let tile: Tile = Tile::from_address(mmu, tile_id);
+                let tile_id: Address = ppu.get_tile_id(tile_x, tile_y);
+                let tile: Tile = ppu.get_tile(tile_id);
                 let color: Byte = tile.get_pixel(pixel_x, pixel_y);
                 let color: Colors = palette.get_color(color);
                 let (r, g, b) = color.to_tuple(false);
@@ -85,7 +85,7 @@ impl LCD {
         surface
     }
 
-    pub fn render_debug_tile_map(&mut self, mmu: &mut MMU) -> ImageSurface {
+    pub fn render_debug_tile_map(&mut self, ppu: &mut PPU) -> ImageSurface {
         let surface: ImageSurface = ImageSurface::create(Format::Rgb24, 256, 256).unwrap();
         let context: Context = Context::new(&surface).unwrap();
 
@@ -101,9 +101,8 @@ impl LCD {
 
         for y in 0..32 {
             for x in 0..32 {
-                let address_tile_map: Address = ADDRESS::TILE_MAP.start + (y * 32 + x) as Address;
-                let tile_id: usize = mmu.read_memory(address_tile_map) as Address;
-                let tile: Tile = Tile::from_address(mmu, tile_id);
+                let tile_id: Address = ppu.get_tile_id(x, y);
+                let tile: Tile = Tile::from_address(ppu, tile_id);
 
                 for ty in 0..8 {
                     for tx in 0..8 {
@@ -120,7 +119,7 @@ impl LCD {
         }
 
         let tile_set_x: f64 = 256.0 + 20.0;
-        let vram_tile_count: usize = (ADDRESS::TILE_SET.end - ADDRESS::TILE_SET.start + 1) / 16;
+        let vram_tile_count: usize = (TILE_SET.end - TILE_SET.start + 1) / 16;
         let tiles_per_row: usize = 16;
         let tile_size: f64 = 16.0;
 
@@ -130,7 +129,7 @@ impl LCD {
             let x: f64 = tile_set_x + (col * tile_size);
             let y: f64 = row * tile_size;
 
-            let tile: Tile = mmu.get_tile(tile_id);
+            let tile: Tile = ppu.get_tile(tile_id);
             let pixels: [[Byte; 8]; 8] = tile.get_pixels();
 
             for (py, row) in pixels.iter().enumerate() {
@@ -145,7 +144,6 @@ impl LCD {
             }
         }
 
-        let (wx, wy) = mmu.get_screen_position();
         context.set_source_rgb(1.0, 0.0, 0.0);
         context.set_line_width(1.0);
 
@@ -174,20 +172,19 @@ impl LCD {
             }
         };
 
-        let wx: f64 = wx as f64;
-        let wy: f64 = wy as f64;
+        let (scx, scy) = ppu.get_screen_scroll();
 
-        draw_border(wx, wy, 1.0, self.screen_height as f64);
+        draw_border(scx, scy, 1.0, self.screen_height as f64);
         draw_border(
-            wx + self.screen_width as f64 - 1.0,
-            wy,
+            scx + self.screen_width as f64 - 1.0,
+            scy,
             1.0,
             self.screen_height as f64,
         );
-        draw_border(wx, wy, self.screen_width as f64, 1.0);
+        draw_border(scx, scy, self.screen_width as f64, 1.0);
         draw_border(
-            wx,
-            wy + self.screen_height as f64 - 1.0,
+            scx,
+            scy + self.screen_height as f64 - 1.0,
             self.screen_width as f64,
             1.0,
         );
@@ -197,12 +194,11 @@ impl LCD {
         surface
     }
 
-    pub fn render_tile_set(&mut self, mmu: &mut MMU) -> ImageSurface {
+    pub fn render_tile_set(&mut self, ppu: &mut PPU) -> ImageSurface {
         let tile_size: f64 = 16.0;
         let tiles_per_row: usize = 16;
         let surface_width: i32 = (tiles_per_row as f64 * tile_size) as i32;
         let surface_height: i32 = 256;
-        let deactivate_filter: bool = false;
 
         let surface: ImageSurface =
             ImageSurface::create(Format::Rgb24, surface_width, surface_height).unwrap();
@@ -218,7 +214,7 @@ impl LCD {
             Colors::Black,
         );
 
-        let vram_tile_count: usize = (ADDRESS::TILE_SET.end - ADDRESS::TILE_SET.start + 1) / 16;
+        let vram_tile_count: usize = (TILE_SET.end - TILE_SET.start + 1) / 16;
 
         for tile_id in 0..vram_tile_count {
             let row: f64 = (tile_id / tiles_per_row) as f64;
@@ -226,7 +222,7 @@ impl LCD {
             let x: f64 = col * tile_size;
             let y: f64 = row * tile_size;
 
-            let tile: Tile = mmu.get_tile(tile_id);
+            let tile: Tile = ppu.get_tile(tile_id);
             let pixels: [[Byte; 8]; 8] = tile.get_pixels();
 
             for (py, row) in pixels.iter().enumerate() {

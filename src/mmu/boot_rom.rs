@@ -1,7 +1,5 @@
-use super::{
-    address::ADDRESS,
-    mmu::{Byte, MMU},
-};
+use super::mmu::MMU;
+use crate::common::{address::TILE_MAP, types::Byte};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 pub struct BootAnimation {
@@ -57,14 +55,14 @@ impl BootROM for MMU {
         self.get_cartridge().print_data();
         self.get_ppu().reset_vram();
 
-        for idx in ADDRESS::TILE_MAP.start..ADDRESS::TILE_MAP.end {
+        for idx in TILE_MAP.start..TILE_MAP.end {
             self.write_memory(idx, 99);
         }
 
-        let logo_nintendo: [[u8; 12]; 32] = self.get_nintendo_logo();
-        self.print_logo(logo_nintendo);
+        let logo_nintendo: [[u8; 12]; 32] = self.get_cartridge().get_nintendo_logo();
+        self.get_ppu().print_logo(logo_nintendo);
 
-        self.set_screen_position(0, 80);
+        self.get_ppu().set_screen_scroll(0, 80);
 
         let animation_mutex: &Mutex<BootAnimation> =
             BOOT_ANIMATION.get_or_init(|| Mutex::new(BootAnimation::new()));
@@ -73,13 +71,13 @@ impl BootROM for MMU {
     }
 
     fn boot_update_animation(&mut self) -> bool {
-        let (wx, _) = self.get_screen_position();
+        let (scx, _) = self.get_ppu().get_screen_scroll();
         let animation_mutex: &Mutex<BootAnimation> =
             BOOT_ANIMATION.get_or_init(|| Mutex::new(BootAnimation::new()));
 
         let mut animation: MutexGuard<'_, BootAnimation> = animation_mutex.lock().unwrap();
         let new_y: Byte = animation.update();
-        self.set_screen_position(wx as Byte, new_y);
+        self.set_screen_scroll(scx as Byte, new_y);
 
         if animation.is_complete() {
             if MMU::delay_frames(30) {
