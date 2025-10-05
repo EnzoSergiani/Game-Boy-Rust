@@ -5,9 +5,13 @@ pub struct AddressRange {
     pub end: Address,
     pub size: Size,
 }
+pub struct AddressOffset {
+    pub offset: Address,
+}
 
 pub struct ADDRESS;
 
+/* === Memory Map ===  */
 pub const ROM: AddressRange = AddressRange {
     start: 0x0000,
     end: 0x7FFF,
@@ -63,11 +67,48 @@ pub const BOOT_ROM: AddressRange = AddressRange {
     end: 0x00FF,
     size: 0x00FF - 0x0000 + 1,
 };
-pub const NINTENDO_LOGO: AddressRange = AddressRange {
-    start: 0x104,
-    end: 0x133,
-    size: 0x133 - 0x104 + 1,
+
+/* === Cartridge header ===  */
+pub const ENTRY_POINT: AddressRange = AddressRange {
+    start: 0x0100,
+    end: 0x0103,
+    size: 0x0103 - 0x0100 + 1,
 };
+pub const NINTENDO_LOGO: AddressRange = AddressRange {
+    start: 0x0104,
+    end: 0x0133,
+    size: 0x0133 - 0x0104 + 1,
+};
+pub const TITLE: AddressRange = AddressRange {
+    start: 0x0134,
+    end: 0x0143,
+    size: 0x0143 - 0x0134 + 1,
+};
+pub const MANUFACTURER_CODE: AddressRange = AddressRange {
+    start: 0x013F,
+    end: 0x0142,
+    size: 0x0142 - 0x013F + 1,
+};
+pub const NEW_LICENSEE_CODE: AddressRange = AddressRange {
+    start: 0x0144,
+    end: 0x0145,
+    size: 0x0145 - 0x0144 + 1,
+};
+pub const SGB_FLAG: AddressOffset = AddressOffset { offset: 0x0146 };
+pub const CARTRIDGE_TYPE: AddressOffset = AddressOffset { offset: 0x0147 };
+pub const ROM_SIZE: AddressOffset = AddressOffset { offset: 0x0148 };
+pub const RAM_SIZE: AddressOffset = AddressOffset { offset: 0x0149 };
+pub const DESTINATION_CODE: AddressOffset = AddressOffset { offset: 0x014A };
+pub const OLD_LICENSEE_CODE: AddressOffset = AddressOffset { offset: 0x014B };
+pub const MASK_ROM_VERSION: AddressOffset = AddressOffset { offset: 0x014C };
+pub const HEADER_CHECKSUM: AddressOffset = AddressOffset { offset: 0x014D };
+pub const GLOBAL_CHECKSUM: AddressRange = AddressRange {
+    start: 0x014E,
+    end: 0x014F,
+    size: 0x014F - 0x014E + 1,
+};
+
+/* ===  ===  */
 pub const TILE_SET: AddressRange = AddressRange {
     start: 0x8000,
     end: 0x97FF,
